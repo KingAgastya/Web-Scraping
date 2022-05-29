@@ -1,37 +1,40 @@
+from turtle import width
+import requests
 from selenium import webdriver
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup as bs
 import time
 import csv
+import pandas as pd
+import requests
 
 START_URL = "https://en.wikipedia.org/wiki/List_of_brightest_stars_and_other_record_stars"
-browser = webdriver.Chrome(".\chromedriver")
-browser.get(START_URL)
-time.sleep(10)
+page  = requests.get(START_URL)
+soup = bs(page.text, "html.parser")
 
-def scrape():
+star_table = soup.find('table')
 
-    headers = ["name", "distance", "mass", "radius"]
-    star_data = []
+temp_list = []
+table_rows = star_table.find_all('tr')
 
-    for i in range(0, 428):
-        soup = BeautifulSoup(browser.page_source, "html.parser")
-        for ul_tag in soup.find_all("ul", attrs={"class", "star"}):
-            li_tags = ul_tag.find_all("li")
-            temp_list = []
-            for index, li_tag in enumerate(li_tags):
-                if index == 0:
-                    temp_list.append(li_tag.find_all("a")[0].contents[0])
-                else:
-                    try:
-                        temp_list.append(li_tag.contents[0])
-                    except:
-                        temp_list.append("")
-            star_data.append(temp_list)
-        browser.find_element_by_xpath('//*[@id="primary_column"]/footer/div/div/div/nav/span[2]/a').click()
+for tr in table_rows:
+    td = tr.find_all('td')
 
-    with open("scrapper.csv", "w") as f:
-        csvwriter = csv.writer(f)
-        csvwriter.writerow(headers)
-        csvwriter.writerows(star_data)
+    row = [i.text.rstrip() for i in td]
+    
+    temp_list.append(row)
 
-scrape()
+star_names = []
+distance = []
+mass = []
+radius = []
+
+for i in range(1, len(temp_list)):
+    star_names.append(temp_list[i][1])
+    distance.append(temp_list[i][3])
+    mass.append(temp_list[i][5])
+    radius.append(temp_list[i][6])
+
+df2 = pd.DataFrame(list(zip(star_names, distance, mass, radius)), columns = ['Star_Name', 'Distance', 'Mass', 'Radius'])
+
+print(df2)
+df2.to_csv('bright_stars.csv')
